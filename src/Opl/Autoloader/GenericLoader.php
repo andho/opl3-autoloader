@@ -90,7 +90,8 @@ class GenericLoader
 		}
 		else
 		{
-			$this->namespaces[(string)$namespace] = $this->defaultPath;
+		    $namespace_path = str_replace($this->namespaceSeparator, '/', $namespace);
+			$this->namespaces[(string)$namespace] = $this->defaultPath . $namespace_path . '/';
 		}
 		$this->extensions[(string)$namespace] = $extension;
 	} // end addNamespace();
@@ -190,18 +191,31 @@ class GenericLoader
 	public function loadClass($className)
 	{
 		$className = ltrim($className, $this->namespaceSeparator);
-		$match = strstr($className, $this->namespaceSeparator, true);
+		
+		$pos = strrpos(ltrim($className, '\\'), '\\');
+		$namespace = substr($className, 0, $pos);
+		$class = substr($className, $pos);
 
-		if(false === $match || !isset($this->namespaces[$match]))
-		{
-			return false;
+		foreach (array_keys($this->namespaces) as $registered_namespaces) {
+		    $pos = strpos($namespace, $registered_namespaces);
+		    
+		    if (false !== $pos) {
+		        $match = $registered_namespaces;
+		        continue;
+		    }
 		}
-		$rest = strrchr($className, $this->namespaceSeparator);
-		$replacement =
+		
+		if (!isset($match)) {
+		    return false;
+		}
+		
+		$rest = ltrim(substr($className, strlen($match)), '\\');
+		$rest = str_replace($this->namespaceSeparator, '/', $rest);
+		/*$replacement =
 			str_replace($this->namespaceSeparator, '/', substr($className, 0, strlen($className) - strlen($rest))).
 			str_replace(array('_', $this->namespaceSeparator), '/', $rest);
-
-		require($this->namespaces[$match].$replacement.$this->extensions[$match]);
+*/
+		require($this->namespaces[$match].$rest.$this->extensions[$match]);
 		return true;
 	} // end loadClass();
 } // end GenericLoader;
